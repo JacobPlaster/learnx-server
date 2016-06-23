@@ -28,48 +28,51 @@ public class Application extends MultiThreadedApplicationAdapter {
 	
 	// Handle logs
 	private static Logger log = Red5LoggerFactory.getLogger(Application.class);
+	RemoteServerHandler rHandler;
+	String conn_secret_key;
 
 	/** {@inheritDoc} */
     @Override
 	public boolean connect(IConnection conn, IScope scope, Object[] params) {
-    	log.info("[STREAM] New connection attempt from " + conn.getRemoteAddress());
     	
+    	log.info("\n\n[STREAM] New connection attempt from " + conn.getRemoteAddress());
+    	conn_secret_key = "TEST1234";
+    	
+    	// Connect to remote server
     	try 
     	{
-    		// was working with amfphp 2.2 but was returning long double
-    		// amfphp 1.6 is compatable with red5 but requires php 5.4 (slow af) and mamp doesnt support
-    		// amf_zend is an alternative but effort to setup and no red5 documentation 
-    		//RemotingClient client = new RemotingClient("http://localhost/learnx-service/flash-services/index.php");
-    		RemotingClient client = new RemotingClient("http://localhost/learnx-service/flash-services/gateway.php");
-    		
-    		Object[] args = new Object[]{"admin","admin"};
-    		System.out.println("\n\n-- Connect called: --\n\n");
-    		
-    		Object result = client.invokeMethod("red5service.login", args);
-    		
-    		// AMFPHP 2.2.2
-    		//Object result = client.invokeMethod("service.red5service.login", args);
-    		
-    		System.out.println("[AMFPHP response] "+ result);
-
-    		if(!result.equals(true)) 
-			{
-    			log.info("[STREAM] User ("+ conn.getRemoteAddress() +") does not have access.");
-				return false;  
-			}
-		} catch (Exception e) 
+    		rHandler = new RemoteServerHandler(conn, log);
+    		rHandler.connectToServer();
+    	} catch (Exception e) 
     	{
-			log.info("[STREAM] Unable to connect \""+ conn.getRemoteAddress() +"\" to flash services");
+    		log.error("[STREAM] Unable to connect \""+ conn.getRemoteAddress() +"\" to flash services");
     		return false;
     	}
-    	log.info("[STREAM] \""+ conn.getRemoteAddress() +"\" connected to flash services successfully");
+    	
+    	// Authenticate users connection
+    	if(!rHandler.AuthenticateAndInitialise(conn_secret_key))
+    	{
+    		log.info("[STREAM] User ("+ conn.getRemoteAddress() +") does not have access.");
+    		return false;
+    	} else
+    	{
+    		log.info("[STREAM] Authenticated user ("+ conn.getRemoteAddress() +") successfully.");
+    	}
+    	
+    	
+    	log.info("[STREAM] Connection with user ("+ conn.getRemoteAddress() +") fully established.");
     	return true;   
 	}
+    
+   
+    
+    
 
 	/** {@inheritDoc} */
     @Override
 	public void disconnect(IConnection conn, IScope scope) {
     	log.info("[STREAM] Connection closed by " + conn.getRemoteAddress());
+    	rHandler.DisconnectFromServer(conn_secret_key);
 		super.disconnect(conn, scope);
 	}
 
