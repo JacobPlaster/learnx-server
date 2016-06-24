@@ -36,7 +36,7 @@ public class Application extends MultiThreadedApplicationAdapter {
 	public boolean connect(IConnection conn, IScope scope, Object[] params) {
     	
     	log.info("\n\n[STREAM] New connection attempt from " + conn.getRemoteAddress());
-    	conn_secret_key = "TEST1234";
+    	conn_secret_key = "8a7df9a87f89dyf89ad7f89dhasdhd9f8a";
     	
     	// Connect to remote server
     	try 
