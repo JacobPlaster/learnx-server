@@ -40,15 +40,10 @@ public class Application extends MultiThreadedApplicationAdapter{
 	/** {@inheritDoc} */
     @Override
 	public synchronized boolean connect(IConnection conn, IScope scope, Object[] params) {
-    	//if (!super.connect(conn, scope, params))
-         //   return false;
-    	/** TODO
-    	 *  - Add parsing for the query string
-    	 *  - Extract a secret key form the query string 
-    	 *  - (PHP) Show list of stream and connect them
-    	 *  - Maybe move the stream database insert into the publish method instead of connect
-    	 */
-    
+    	/*if (!super.connect(conn, scope, params))
+           return false; */
+    	
+    	log.info("[STREAM - APPLICATION] connect");
     	// Connect to remote server
     	try 
     	{
@@ -57,24 +52,20 @@ public class Application extends MultiThreadedApplicationAdapter{
     		queryString = String.valueOf(conn.getConnectParams().get("queryString")); 
     	} catch (Exception e) 
     	{
-    		log.error("[STREAM] Unable to connect \""+ conn.getRemoteAddress() +"\" to flash services");
-    		return false;
+    		this.rejectClient("Unable to connect to flash services.");
     	}
-    	
-    	log.info("[STREAM] Connection with user ("+ conn.getRemoteAddress() +") fully established.");
     	return true;   
 	}
     
     /** {@inheritDoc} */
     @Override
     public void streamPublishStart(IBroadcastStream stream) {
+    	log.info("[STREAM - APPLICATION] streamPublishStart");
     	
     	// parse secret from query string
     	conn_secret_key = ServiceFunctions.parseQueryForSecret(queryString);
-    	log.info(conn_secret_key);
     	// no secret in query
     	if(conn_secret_key == null) this.rejectClient("No secret found.");
-    	
     	
     	/// authenticate error string against room name (needs to be associated with user)
     	String response = rHandler.AuthenticateAndInitialise(conn_secret_key);
@@ -91,14 +82,13 @@ public class Application extends MultiThreadedApplicationAdapter{
         {
         	this.rejectClient("Incorrect authentication details.");
         }
-        log.info("PUBLISH CALLED!!");
         super.streamPublishStart(stream);
     }
     
 	/** {@inheritDoc} */
     @Override
 	public void disconnect(IConnection conn, IScope scope) {
-    	log.info("[STREAM] Connection closed by " + conn.getRemoteAddress());
+    	log.info("[STREAM - APPLICATION] disconnect");
     	rHandler.DisconnectFromServer(conn_secret_key);
 		super.disconnect(conn, scope);
 	}
