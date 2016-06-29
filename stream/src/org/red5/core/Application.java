@@ -33,6 +33,7 @@ public class Application extends MultiThreadedApplicationAdapter{
 	private static Logger log = Red5LoggerFactory.getLogger(Application.class);
 	RemoteServerHandler rHandler;
 	String conn_secret_key;
+	String queryString;
 	
 	String authTargetRoomName;
 
@@ -41,36 +42,24 @@ public class Application extends MultiThreadedApplicationAdapter{
 	public synchronized boolean connect(IConnection conn, IScope scope, Object[] params) {
     	//if (!super.connect(conn, scope, params))
          //   return false;
-   
-    	conn_secret_key = "8a7df9a87f89dyf89ad7f89dhasdhd9f8a";
-    	
-    	Map<String, Object> connectionParams = conn.getConnectParams();
-    	log.info("\nHHHHEEEERRREEEE");
-    	log.info("Connection params: {}\n", connectionParams.toString());
-    	log.info("Scope: {}\n", scope);
-    	
+    	/** TODO
+    	 *  - Add parsing for the query string
+    	 *  - Extract a secret key form the query string 
+    	 *  - (PHP) Show list of stream and connect them
+    	 *  - Maybe move the stream database insert into the publish method instead of connect
+    	 */
+    
     	// Connect to remote server
     	try 
     	{
     		rHandler = new RemoteServerHandler(conn, log);
     		rHandler.connectToServer();
+    		queryString = String.valueOf(conn.getConnectParams().get("queryString")); 
     	} catch (Exception e) 
     	{
     		log.error("[STREAM] Unable to connect \""+ conn.getRemoteAddress() +"\" to flash services");
     		return false;
     	}
-    	
-    	// Checks if error connecting to server
-    	String response = rHandler.AuthenticateAndInitialise(conn_secret_key);
-    	if(response == "404")
-    	{
-    		log.info("[STREAM] User ("+ conn.getRemoteAddress() +") does not have access.");
-    		return false;
-    	} else
-    	{
-    		authTargetRoomName = response;
-    	}
-    	
     	
     	log.info("[STREAM] Connection with user ("+ conn.getRemoteAddress() +") fully established.");
     	return true;   
@@ -79,11 +68,30 @@ public class Application extends MultiThreadedApplicationAdapter{
     /** {@inheritDoc} */
     @Override
     public void streamPublishStart(IBroadcastStream stream) {
+    	
+    	// parse secret from query string
+    	conn_secret_key = ServiceFunctions.parseQueryForSecret(queryString);
+    	log.info(conn_secret_key);
+    	// no secret in query
+    	if(conn_secret_key == null) this.rejectClient("No secret found.");
+    	
+    	
+    	/// authenticate error string against room name (needs to be associated with user)
+    	String response = rHandler.AuthenticateAndInitialise(conn_secret_key);
+    	if(response == "404")
+    	{
+    		this.rejectClient("Invalid secret.");
+    	} else
+    	{
+    		authTargetRoomName = response;
+    	}
+    	
     	// Checks if room the client is publishing to is the same name as the user linked to the secret key
         if(!stream.getPublishedName().equals(authTargetRoomName))
         {
         	this.rejectClient("Incorrect authentication details.");
         }
+        log.info("PUBLISH CALLED!!");
         super.streamPublishStart(stream);
     }
     
