@@ -30,22 +30,20 @@ public class RemoteServerHandler {
 		return this.client;
     }
 	
-	public boolean AuthenticateAndInitialise(String secureKey)
+	public String AuthenticateAndInitialise(String secureKey)
     {
+		Object result;
     	try 
     	{
     		Object[] args = new Object[]{secureKey};
-    		Object result = client.invokeMethod(AUTHENTICATE_AND_INITIALISE_FUNCTION , args);
-    		// User not authenticated
-    		if(!result.equals(true)) 
-				return false;  
+    		result = client.invokeMethod(AUTHENTICATE_AND_INITIALISE_FUNCTION , args);
 		} catch (Exception e) 
     	{
 			log.info("[STREAM] Unable to connect \""+ conn.getRemoteAddress() +"\" to flash services");
-    		return false;
+    		return "404";
     	}
     	// Successfull 
-    	return true;
+    	return (String) result;
     }
 	
 	public void DisconnectFromServer(String secureKey)
